@@ -1,7 +1,7 @@
 - name: Install and configure Nginx with letsencrypt
   hosts: Frontend
   tasks:
-      - name: Création du fichier de conf
-        file:
-            path: /tmp/apps.conf
-            state: touch
+    - name: Création du fichier de conf
+      file:
+        path: /tmp/apps.conf
+        state: touch
