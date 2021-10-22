@@ -1,0 +1,4 @@
+devops_tools:
+  env: dev
+  domain_name: mdtechnology.fr
+

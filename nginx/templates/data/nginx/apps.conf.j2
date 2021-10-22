@@ -1,0 +1,103 @@
+server {
+     listen 80;
+     server_name {{ devops_tools.env }}.{{ devops_tools.domain_name }};
+     server_tokens off;
+     location /.well-known/acme-challenge/ {
+         root /var/www/certbot;
+     }
+
+     location / {
+         return 301 https://$host$request_uri;
+     }
+}
+
+server {
+     listen 443 ssl;
+     server_name gitlab.{{ devops_tools.domain_name }};
+     server_tokens off;
+
+     ssl_certificate /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/fullchain.pem;
+     ssl_certificate_key /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/privkey.pem;
+     include /etc/letsencrypt/options-ssl-nginx.conf;
+     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+     location / {
+         proxy_pass  https://{{ devops_tools.env }}.{{ devops_tools.domain_name }}:9443;
+         proxy_set_header    Host                $http_host;
+         proxy_set_header    X-Real-IP           $remote_addr;
+         proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+     }
+}
+
+
+server {
+     listen 443 ssl;
+     server_name jenkins.{{ devops_tools.domain_name }};
+     server_tokens off;
+
+     ssl_certificate /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/fullchain.pem;
+     ssl_certificate_key /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/privkey.pem;
+     include /etc/letsencrypt/options-ssl-nginx.conf;
+     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+     location / {
+         proxy_pass  http://{{ devops_tools.env }}.{{ devops_tools.domain_name }}:8180;
+         proxy_set_header    Host                $http_host;
+         proxy_set_header    X-Real-IP           $remote_addr;
+         proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+     }
+}
+
+server {
+     listen 443 ssl;
+     server_name keycloak.{{ devops_tools.domain_name }};
+     server_tokens off;
+
+     ssl_certificate /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/fullchain.pem;
+     ssl_certificate_key /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/privkey.pem;
+     include /etc/letsencrypt/options-ssl-nginx.conf;
+     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+     location / {
+         proxy_pass  https://{{ devops_tools.env }}.{{ devops_tools.domain_name }}:8443;
+         proxy_set_header    Host                $http_host;
+         proxy_set_header    X-Real-IP           $remote_addr;
+         proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+     }
+}
+
+server {
+     listen 443 ssl;
+     server_name neo4j.{{ devops_tools.domain_name }};
+     server_tokens off;
+
+     ssl_certificate /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/fullchain.pem;
+     ssl_certificate_key /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/privkey.pem;
+     include /etc/letsencrypt/options-ssl-nginx.conf;
+     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+     location / {
+         proxy_pass  http://{{ devops_tools.env }}.{{ devops_tools.domain_name }}:7474;
+         proxy_set_header    Host                $http_host;
+         proxy_set_header    X-Real-IP           $remote_addr;
+         proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+     }
+}
+
+server {
+     listen 443 ssl;
+     server_name artifactory.{{ devops_tools.domain_name }};
+     server_tokens off;
+
+     ssl_certificate /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/fullchain.pem;
+     ssl_certificate_key /etc/letsencrypt/live/gitlab.{{ devops_tools.domain_name }}/privkey.pem;
+     include /etc/letsencrypt/options-ssl-nginx.conf;
+     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+     location / {
+         proxy_pass  http://{{ devops_tools.env }}.{{ devops_tools.domain_name }}:8082;
+         proxy_set_header    Host                $http_host;
+         proxy_set_header    X-Real-IP           $remote_addr;
+         proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+     }
+}

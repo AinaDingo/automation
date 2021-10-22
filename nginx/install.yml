@@ -1,7 +1,79 @@
-- name: Install and configure Nginx with letsencrypt
-  hosts: Frontend
+- name: Prepare Frontend installation
+  hosts: devops_server
+  become: yes
+  gather_facts: no
   tasks:
-    - name: Création du fichier de conf
+    - name: Remove VirtualEnv
       file:
-        path: /tmp/apps.conf
-        state: touch
+        path: "{{ devops_path }}/venv"
+        state: absent
+
+    - name: Install python3-venv
+      shell: apt-get -y install python3-venv
+
+    - name: Create VirtualEnv
+      shell: python3 -m venv "{{ devops_path }}/venv"
+
+    - name: Install docker module in venv
+      shell: "{{ devops_path }}/venv/bin/pip install docker"
+
+    - name: Remove deployment directory
+      file:
+        path: "{{ devops_path }}/nginx"
+        state: absent
+
+    - name: Create deployment directory
+      file:
+        path: "{{ devops_path }}/nginx"
+        state: directory
+
+    - name: Create conf directory
+      file:
+        path: "{{ devops_path }}/nginx/data/nginx"
+        state: directory
+
+    - name: Chargement des variables d'environnment
+      include_vars: "{{ env }}.yml"
+
+- name: Configuration Frontend installation
+  hosts: devops_server
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Set nginx conf
+      template:
+        src: templates/data/nginx/apps.conf.j2
+        dest: "{{ devops_path }}/nginx/data/nginx/apps.conf"
+    - name: Copy docker-compose
+      copy:
+        src: templates/docker-compose.yml
+        dest: "{{ devops_path }}/nginx/docker-compose.yml"
+    - name: Copy init letsencrypt
+      template:
+        src: templates/init-letsencrypt.sh.j2
+        dest: "{{ devops_path }}/nginx/init-letsencrypt.sh"
+        mode: 0755
+
+- name: Start Frontend
+  hosts: devops_server
+  become: yes
+  gather_facts: no
+  vars:
+    ansible_python_interpreter: "{{ devops_path }}/venv/bin/python"
+  tasks:
+    - name: Check Container info
+      docker_container_info:
+        name: frontend
+      register: result
+    - debug:
+        var: result
+    - name: Stop Frontend
+      when: result.exists
+      docker_container:
+        name: frontend
+        state: stopped
+    - name: Start frontend
+      shell: ./init-letsencrypt.sh
+      args:
+        chdir: "{{ devops_path }}/nginx/"
+
