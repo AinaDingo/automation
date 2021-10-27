@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  jenkins:
+    container_name: jenkins
+    image: jenkins/jenkins
+    ports:
+      - "8180:8080"
+    user: root
+    volumes:
+      - {{ devops_tools.state_base_dir }}/jenkins:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock

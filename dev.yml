@@ -1,0 +1,7 @@
+devops_tools:
+  state_base_dir: /opt
+  env: dev
+  domain_name: mdtechnology.fr
+  gitlab_ce:
+
+
