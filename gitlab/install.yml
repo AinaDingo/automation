@@ -1,0 +1,101 @@
+- name: Prepare Gitlab installation
+  hosts: devops_server
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Chargement des variables d'environnment
+      include_vars: "../{{ env }}.yml"
+
+    - name: Remove VirtualEnv
+      file:
+        path: "{{ devops_path }}/venv"
+        state: absent
+
+    - name: Install python3-venv
+      shell: apt-get -y install python3-venv
+
+    - name: Create VirtualEnv
+      shell: python3 -m venv "{{ devops_path }}/venv"
+
+    - name: Install docker module in venv
+      shell: "{{ devops_path }}/venv/bin/pip install docker"
+
+    - name: Create deployment directory
+      file:
+        path: "{{ devops_tools.state_base_dir }}/gitlab"
+        state: directory
+
+    - name: Create gitlab config ssl directory
+      file:
+        path: "{{ devops_tools.state_base_dir }}/gitlab/config/ssl/"
+        recurse: yes
+        state: directory
+
+    - name: Create gitlab-runner1 config ssl directory
+      file:
+        path: "{{ devops_tools.state_base_dir }}/gitlab/gitlab-runner1-config/certs/"
+        recurse: yes9443
+        state: directory
+
+- name: Gitlab installation
+  hosts: devops_server
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Copy docker-compose
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ devops_tools.state_base_dir }}/gitlab/docker-compose.yml"
+
+    - name: Copy register-runner.sh
+      template:
+        src: templates/register-runner.sh.j2
+        dest: "{{ devops_tools.state_base_dir }}/gitlab/register-runner.sh.j2"
+        mode: 0755
+
+    - name: Copie du certificat nginx (letsencrypt)
+      copy:
+        src: "{{ devops_tools.state_base_dir }}/nginx/data/certbot/conf/live/gitlab.{{ devops_tools.domain_name }}/cert.pem"
+        dest: "{{ devops_tools.state_base_dir }}/gitlab/config/ssl/gitlab.{{ devops_tools.domain_name }}.crt"
+        remote_src: yes
+
+    - name: Copie de la clé privée nginx (letsencrypt)
+      copy:
+        src: "{{ devops_tools.state_base_dir }}/nginx/data/certbot/conf/live/gitlab.{{ devops_tools.domain_name }}/privkey.pem"
+        dest: "{{ devops_tools.state_base_dir }}/gitlab/config/ssl/gitlab.{{ devops_tools.domain_name }}.key"
+        remote_src: yes
+
+- name: Start Gitlab
+  hosts: devops_server
+  become: yes
+  gather_facts: no
+  vars:
+    ansible_python_interpreter: "{{ devops_path }}/venv/bin/python"
+  tasks:
+    - name: Restart Gitlab
+      shell: docker-compose down; docker-compose up -d
+      args:
+        chdir: "{{ devops_tools.state_base_dir }}/gitlab/"
+
+    - name: Copie du certificat nginx (letsencrypt)
+      copy:
+        src: "{{ devops_tools.state_base_dir }}/nginx/data/certbot/conf/live/gitlab.{{ devops_tools.domain_name }}/cert.pem"
+        dest: "{{ devops_tools.state_base_dir }}/gitlab/config/ssl/gitlab.{{ devops_tools.domain_name }}.crt"
+        remote_src: yes
+
+    - name: Copie de la clé privée nginx (letsencrypt)
+      copy:
+        src: "{{ devops_tools.state_base_dir }}/nginx/data/certbot/conf/live/gitlab.{{ devops_tools.domain_name }}/privkey.pem"
+        dest: "{{ devops_tools.state_base_dir }}/gitlab/config/ssl/gitlab.{{ devops_tools.domain_name }}.key"
+        remote_src: yes
+
+    - name: Copie du certificat serveur dans la conf du runner
+      copy:
+        src: "{{ devops_tools.state_base_dir }}/nginx/data/certbot/conf/live/gitlab.{{ devops_tools.domain_name }}/cert.pem"
+        dest: "{{ devops_tools.state_base_dir }}/gitlab/gitlab-runner1-config/certs/cert.pem"
+        remote_src: yes
+
+    - name: Restart Gitlab
+      shell: docker-compose down; docker-compose up -d
+      args:
+        chdir: "{{ devops_tools.state_base_dir }}/gitlab/"
