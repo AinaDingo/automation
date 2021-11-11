@@ -30,14 +30,16 @@ services:
     ports:
       - 9600:9600
       - 8089:8089
+    command: logstash -f /etc/logstash/conf.d/logstash.conf
     volumes:
-      - .\logstash:/usr/share/logstash/pipeline/:rw
+      - ./logstash/logstash.conf:/etc/logstash/conf.d/logstash.conf:ro
     links:
       - elasticsearch:elasticsearch
     depends_on:
       - elasticsearch
     networks:
       - elknetwork
+    restart: unless-stopped
 networks:
   elknetwork:
     driver: bridge
