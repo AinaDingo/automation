@@ -1,0 +1,57 @@
+- name: ELK Configuration
+  hosts: devops_server
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Remove ELK-Stack dir
+      file:
+        path: "{{ services_path }}/elk-stack"
+        state: absent
+    - name: Create ELK-stack dir
+      file:
+        path: "{{ services_path }}/elk-stack"
+        state: directory
+        mode: '0755'
+    - name: Create conf dirs
+      with_items:
+        - kibana
+        - logstash
+        - elasticsearch
+      file:
+        path: "{{ services_path }}/elk-stack/{{ item }}/config"
+        state: directory
+        recurse: yes
+        mode: '0755'
+    - name: Copy conf
+      with_items:
+        - kibana
+        - logstash
+        - elasticsearch
+      copy:
+        src: "./docker-elk/{{item}}/config/{{item}}.yml"
+        dest: "{{ services_path }}/elk-stack/{{item}}/config"
+    - name: Create logstash pipeline dir
+      file:
+        path: "{{ services_path }}/elk-stack/logstash/pipeline"
+        state: directory
+        mode: '0755'
+    - name: Copy logstash pipeline
+      copy:
+        src: ./docker-elk/logstash/pipeline/logstash.conf
+        dest: "{{ services_path }}/elk-stack/logstash/pipeline"
+    - name: Copy docker-compose
+      template:
+        src: docker-elk/docker-compose.yml
+        dest: "{{ services_path }}/elk-stack/docker-compose.yml"
+
+- name: ELK start
+  hosts: devops_server
+  become: yes
+  gather_facts: no
+  vars:
+    ansible_python_interpreter: "{{ devops_path }}/venv/bin/python"
+  tasks:
+    - name: Restart ELK
+      shell: docker-compose down; docker-compose up -d --remove-orphans
+      args:
+        chdir: "{{ services_path }}/elk-stack/"
